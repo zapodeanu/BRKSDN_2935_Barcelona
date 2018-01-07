@@ -328,6 +328,22 @@ def get_device_id_sn(device_sn, dnac_jwt_token):
     return device_id
 
 
+def get_device_location(device_name, dnac_jwt_token):
+    """
+    This function will find the location for the device with the name {device_name}
+    :param device_name: device name
+    :param dnac_jwt_token: DNA C token
+    :return: the location
+    """
+    device_id = get_device_id_name(device_name, dnac_jwt_token)
+    url = DNAC_URL + '/api/v1/group/member/' + device_id + '?groupType=SITE'
+    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
+    device_response = requests.get(url, headers=header, verify=False)
+    device_info = (device_response.json())['response']
+    device_location = device_info[0]['groupNameHierarchy']
+    return device_location
+
+
 def create_site(site_name, dnac_jwt_token):
     """
     The function will create a new site with the name {site_name}
@@ -660,3 +676,4 @@ def get_path_visualisation_info(path_id, dnac_jwt_token):
                 pass
         path_list.append(path_info['request']['destIP'])
     return path_status, path_list
+

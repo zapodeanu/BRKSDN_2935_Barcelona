@@ -73,6 +73,7 @@ def main():
     # production (logging to files - erna_log.log, erna_err.log))
 
     #user_input = utils.get_input_timeout('If running in Demo Mode please enter y ', 10)
+
     user_input = 'y'
     if user_input != 'y':
 
@@ -94,49 +95,53 @@ def main():
     DATE_TIME = str(datetime.datetime.now().replace(microsecond=0))
     print('\nThe app started running at this time ' + DATE_TIME)
 
-    # verify if Spark Space exists, if not create Spark Space, and add membership (optional)
+    user_input = 'y'
+    # user_input = utils.get_input_timeout('Enter y to skip next section : ', 10)
 
-    spark_room_id = spark_apis.get_room_id(ROOM_NAME)
-    if spark_room_id is None:
-        spark_room_id = spark_apis.create_room(ROOM_NAME)
-        print('- ', ROOM_NAME, ' -  Spark room created')
+    if user_input != 'y':
+        # verify if Spark Space exists, if not create Spark Space, and add membership (optional)
 
-        # invite membership to the room
-        spark_apis.add_room_membership(spark_room_id, IT_ENG_EMAIL)
+        spark_room_id = spark_apis.get_room_id(ROOM_NAME)
+        if spark_room_id is None:
+            spark_room_id = spark_apis.create_room(ROOM_NAME)
+            print('- ', ROOM_NAME, ' -  Spark room created')
 
-        spark_apis.post_room_message(ROOM_NAME, 'To require access enter :  IPD')
-        spark_apis.post_room_message(ROOM_NAME, 'Ready for input!')
-        print('Instructions posted in the room')
-    else:
-        print('- ', ROOM_NAME, ' -  Existing Spark room found')
+            # invite membership to the room
+            spark_apis.add_room_membership(spark_room_id, IT_ENG_EMAIL)
 
-        spark_apis.post_room_message(ROOM_NAME, 'To require access enter :  IPD')
-        spark_apis.post_room_message(ROOM_NAME, 'Ready for input!')
-    print('- ', ROOM_NAME, ' -  Spark room id: ', spark_room_id)
-
-    # check for messages to identify the last message posted and the user's email who posted the message
-    # check for the length of time required for access
-
-    last_message = (spark_apis.last_user_message(ROOM_NAME))[0]
-
-    while last_message == 'Ready for input!':
-        time.sleep(5)
-        last_message = (spark_apis.last_user_message(ROOM_NAME))[0]
-        if last_message == 'IPD':
-            last_person_email = (spark_apis.last_user_message(ROOM_NAME))[1]
-            spark_apis.post_room_message(ROOM_NAME, 'How long time do you need access for? (in minutes)  : ')
-            time.sleep(10)
-            if (spark_apis.last_user_message(ROOM_NAME))[0] == 'How long time do you need access for? (in minutes)  : ':
-                timer = 30 * 60
-            else:
-                timer = int(spark_apis.last_user_message(ROOM_NAME)[0]) * 60
-        elif last_message != 'Ready for input!':
-            spark_apis.post_room_message(ROOM_NAME, 'I do not understand you')
             spark_apis.post_room_message(ROOM_NAME, 'To require access enter :  IPD')
             spark_apis.post_room_message(ROOM_NAME, 'Ready for input!')
-            last_message = 'Ready for input!'
+            print('Instructions posted in the room')
+        else:
+            print('- ', ROOM_NAME, ' -  Existing Spark room found')
 
-    print('\nThe user with this email: ', last_person_email, ' will be granted access to IPD for ', (timer/60), ' minutes')
+            spark_apis.post_room_message(ROOM_NAME, 'To require access enter :  IPD')
+            spark_apis.post_room_message(ROOM_NAME, 'Ready for input!')
+        print('- ', ROOM_NAME, ' -  Spark room id: ', spark_room_id)
+
+        # check for messages to identify the last message posted and the user's email who posted the message
+        # check for the length of time required for access
+
+        last_message = (spark_apis.last_user_message(ROOM_NAME))[0]
+
+        while last_message == 'Ready for input!':
+            time.sleep(5)
+            last_message = (spark_apis.last_user_message(ROOM_NAME))[0]
+            if last_message == 'IPD':
+                last_person_email = (spark_apis.last_user_message(ROOM_NAME))[1]
+                spark_apis.post_room_message(ROOM_NAME, 'How long time do you need access for? (in minutes)  : ')
+                time.sleep(10)
+                if (spark_apis.last_user_message(ROOM_NAME))[0] == 'How long time do you need access for? (in minutes)  : ':
+                    timer = 30 * 60
+                else:
+                    timer = int(spark_apis.last_user_message(ROOM_NAME)[0]) * 60
+            elif last_message != 'Ready for input!':
+                spark_apis.post_room_message(ROOM_NAME, 'I do not understand you')
+                spark_apis.post_room_message(ROOM_NAME, 'To require access enter :  IPD')
+                spark_apis.post_room_message(ROOM_NAME, 'Ready for input!')
+                last_message = 'Ready for input!'
+
+        print('\nThe user with this email: ', last_person_email, ' will be granted access to IPD for ', (timer/60), ' minutes')
 
     # get UCSD API key
     # ucsd_key = get_ucsd_api_key()
@@ -155,7 +160,8 @@ def main():
     ipd_ip = '10.93.140.35'
 
     # locate IPD in the environment using DNA C
-    dnac_apis.get_
+    ipd_location_info = dnac_apis.locate_client_ip(ipd_ip, dnac_token)
+    print(ipd_location_info)
 
 
     # restore the stdout to initial value
