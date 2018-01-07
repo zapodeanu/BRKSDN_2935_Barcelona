@@ -10,18 +10,13 @@ import time
 import requests.packages.urllib3
 
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
 from requests.auth import HTTPBasicAuth  # for Basic Auth
 
 from ERNA_init import GOOGLE_API_KEY
+from ERNA_init import DNAC_URL, DNAC_PASS, DNAC_USER
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
 
-# use the DNA Center controller
-
-DNAC_URL = 'https://172.28.97.216'
-DNAC_USER = 'admin'
-DNAC_PASS = 'Cisco123'
 
 DNAC_AUTH = HTTPBasicAuth(DNAC_USER, DNAC_PASS)
 
@@ -94,13 +89,13 @@ def get_project_info(project_name, dnac_jwt_token):
     return template_list
 
 
-def create_commit_template(template_name, project_name, template_content, dnac_jwt_token):
+def create_commit_template(template_name, project_name, cli_template, dnac_jwt_token):
     """
     This function will create and commit a CLI template, under the project with the name {project_name}, with the the text content
-    {template_content}
+    {cli_template}
     :param template_name: CLI template name
     :param project_name: Project name
-    :param template_content: CLI template text content
+    :param cli_template: CLI template text content
     :param dnac_jwt_token: DNA C token
     :return:
     """
@@ -123,7 +118,7 @@ def create_commit_template(template_name, project_name, template_content, dnac_j
             "softwareType": "IOS-XE",
             "softwareVariant": "XE",
             "softwareVersion": "",
-            "templateContent": template_content,
+            "templateContent": cli_template,
             "rollbackTemplateContent": "",
             "templateParams": [],
             "rollbackTemplateParams": [],
@@ -275,7 +270,7 @@ def locate_client_ip(client_ip, dnac_jwt_token):
     Locate a wired client device in the infrastructure by using the client IP address
     Call to DNA C - api/v1/host?hostIp={client_ip}
     :param client_ip: Client IP Address
-    :param ticket: APIC-EM ticket
+    :param dnac_jwt_token: DNA C token
     :return: hostname, interface_name, vlan_id
     """
     url = DNAC_URL + '/api/v1/host?hostIp=' + client_ip
@@ -597,7 +592,7 @@ def check_task_id_status(task_id, dnac_jwt_token):
     task_response = requests.get(url, headers=header, verify=False)
     task_json = task_response.json()
     task_status = task_json['response']['isError']
-    if task_status == False:
+    if not task_status:
         task_result = 'SUCCESS'
     else:
         task_result = 'FAILURE'
@@ -632,7 +627,7 @@ def create_path_visualisation(src_ip, dest_ip, dnac_jwt_token):
 
 def get_path_visualisation_info(path_id, dnac_jwt_token):
     """
-    This function will return the path visualisation details for the APIC-EM path visualisation {id}
+    This function will return the path visualisation details for the path visualisation {id}
     :param path_id: DNA C path visualisation id
     :param dnac_jwt_token: DNA C token
     :return: Path visualisation details in a list [device,interface_out,interface_in,device...]
@@ -665,57 +660,3 @@ def get_path_visualisation_info(path_id, dnac_jwt_token):
                 pass
         path_list.append(path_info['request']['destIP'])
     return path_status, path_list
-
-
-
-dnac_token = get_dnac_jwt_token(DNAC_AUTH)
-print('DNA C Token: ', dnac_token)
-
-template_content = 'ip prefix-list REMOTE_ACCESS_PLIST seq 5 permit 10.93.140.35/32\nrouter eigrp 201\ninterface l201'
-
-create_commit_template('Remote', 'ERNA', template_content, dnac_token)
-
-get_template_id('Remote', 'ERNA', dnac_token)
-
-pprint(get_template_info(dnac_token))
-
-# create_commit_template('Remote', 'ERNA', template_content, dnac_token)
-
-# delete_template('Remote', dnac_token)
-
-# pprint(get_template_name_info('GRE_Remote_Config', dnac_token))
-
-# deployment = deploy_template('GRE_Remote_Config', 'NYC-9300', dnac_token) # to test template deployments
-
-# deployment_task_id = deployment[1]
-
-# time.sleep(5)
-
-# print(check_template_deployment_status(deployment_task_id, dnac_token))
-
-# create_site('USA', dnac_token)
-# print('site id', get_site_id('USA', dnac_token))
-# create_building('USA', 'Sherwood', '23742 SW Pinehurst Dr., Sherwood, OR 97140', dnac_token)
-# print(get_building_id('Sherwood',dnac_token))
-
-# create_floor('Sherwood', 'Floor 1', '1', dnac_token)
-# print(get_floor_id('Sherwood', 'Floor 1', dnac_token  ))
-
-# assign_device_sn_building('FCW2123L0N3', 'Manhattan', dnac_token)
-# assign_device_name_building('PDX-RO', 'Lake Oswego', dnac_token)
-
-# sync_return = []
-# sync_return = sync_device('PDX-RO', dnac_token)
-# task_id = sync_return[1]
-# print('task id ', task_id)
-# print('status code ', sync_return[0])
-
-# time.sleep(3)
-
-# print(check_task_id_status(task_id, dnac_token))
-
-# path_trace_id = (create_path_visualisation('10.93.130.21', '10.93.140.35', dnac_token))
-# print(path_trace_id)
-# time.sleep(30)
-
-# get_path_visualisation_info(path_trace_id, dnac_token)
