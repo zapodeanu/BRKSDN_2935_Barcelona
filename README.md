@@ -5,7 +5,9 @@ Software included:
 
     ERNA_CL.py - full lab/POC Python code.
     ERNA_init.py - init file for variables
-    dnac_apis.py - Python library with various DNA Center functions
+    dnac_apis.py - Python module with various DNA Center functions
+    spark_apis.py - Python module with various Spark functions
+    utils.py - Python module with few handy functions
 
 
 This session will showcase the use of the open REST API's available in:
