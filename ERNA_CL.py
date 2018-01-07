@@ -161,7 +161,86 @@ def main():
 
     # locate IPD in the environment using DNA C
     ipd_location_info = dnac_apis.locate_client_ip(ipd_ip, dnac_token)
-    print(ipd_location_info)
+
+    remote_device_hostname = ipd_location_info[0]
+    vlan_number = ipd_location_info[2]
+    interface_name = ipd_location_info[1]
+
+    remote_device_location = dnac_apis.get_device_location(remote_device_hostname, dnac_token)
+
+    print('\nThe IPD is connected to:')
+    print('this interface:', interface_name, ', access VLAN:', vlan_number)
+    print('on this device:', remote_device_hostname)
+    print('located:       ', remote_device_location)
+
+    # deployment of interface configuration files to the DC router
+
+    dc_device_hostname = 'PDX-RO'
+    project = 'ERNA'
+    print('\nThe DC device name is: ', dc_device_hostname)
+
+    dc_int_config_file = 'DC_Interface_Config.txt'
+    dc_int_templ = 'DC_Interface_Config'
+
+    cli_file = open(dc_int_config_file, 'r')
+    cli_config = cli_file.read()
+
+    dnac_apis.upload_template(dc_int_templ, project, cli_config, dnac_token)
+    depl_id_dc_int = dnac_apis.deploy_template(dc_int_templ, project, dc_device_hostname, dnac_token)
+
+    # deployment of routing configuration files to the DC router
+
+    dc_rout_config_file = 'DC_Routing_Config.txt'
+    dc_rout_templ = 'DC_Routing_Config'
+
+    cli_file = open(dc_rout_config_file, 'r')
+    cli_config = cli_file.read()
+
+    dnac_apis.upload_template(dc_rout_templ, project, cli_config, dnac_token)
+    depl_id_dc_routing = dnac_apis.deploy_template(dc_rout_templ, project, dc_device_hostname, dnac_token)
+
+    dc_int_config_file = 'DC_Interface_Config.txt'
+    dc_int_templ = 'DC_Interface_Config'
+
+    cli_file = open(dc_int_config_file, 'r')
+    cli_config = cli_file.read()
+
+    dnac_apis.upload_template(dc_int_templ, project, cli_config, dnac_token)
+    depl_id_dc_int = dnac_apis.deploy_template(dc_int_templ, project, dc_device_hostname, dnac_token)
+
+
+    # deployment of interface configuration files to the Remote router
+
+    remote_int_config_file = 'Remote_Interface_Config.txt'
+    remote_int_templ = 'Remote_Interface_Config'
+
+    cli_file = open(remote_int_config_file, 'r')
+    cli_config = cli_file.read()
+
+    dnac_apis.upload_template(remote_int_templ, project, cli_config, dnac_token)
+    depl_id_remote_int = dnac_apis.deploy_template(remote_int_templ, project, remote_device_hostname, dnac_token)
+
+    # deployment of routing configuration files to the Remote router
+
+    remote_rout_config_file = 'Remote_Routing_Config.txt'
+    remote_rout_templ = 'Remote_Routing_Config'
+
+    cli_file = open(remote_rout_config_file, 'r')
+    cli_config = cli_file.read()
+
+    # update the template with the local info for the IPD
+    # replace the $VlanId with the local VLAN access
+    # replace the $IPD with the IPD ip address
+
+    cli_config = cli_config.replace('$IPD', ipd_ip)
+    cli_config = cli_config.replace('$VlanId', vlan_number)
+    print(cli_config)
+
+    dnac_apis.upload_template(remote_rout_templ, project, cli_config, dnac_token)
+    depl_id_remote_routing = dnac_apis.deploy_template(remote_rout_templ, project, dc_device_hostname, dnac_token)
+
+
+
 
 
     # restore the stdout to initial value
@@ -170,7 +249,7 @@ def main():
     # the local date and time when the code will end execution
 
     DATE_TIME = str(datetime.datetime.now().replace(microsecond=0))
-    print('End of application run at this time ', DATE_TIME)
+    print('\n\nEnd of application run at this time ', DATE_TIME)
 
 
 if __name__ == '__main__':
