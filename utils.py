@@ -11,10 +11,8 @@ import select
 import requests
 import time
 import requests.packages.urllib3
-import PIL
 import os
 import os.path
-
 
 from PIL import Image, ImageDraw, ImageFont
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
