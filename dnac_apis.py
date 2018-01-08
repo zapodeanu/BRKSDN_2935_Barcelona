@@ -323,6 +323,7 @@ def check_template_deployment_status(depl_task_id, dnac_jwt_token):
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     response = requests.get(url, headers=header, verify=False)
     response_json = response.json()
+    pprint(response_json)
     deployment_status = response_json["status"]
     return deployment_status
 
@@ -697,8 +698,6 @@ def create_path_visualisation(src_ip, dest_ip, dnac_jwt_token):
     header = {'accept': 'application/json', 'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     path_response = requests.post(url, data=json.dumps(param), headers=header, verify=False)
     path_json = path_response.json()
-    print(path_response.status_code)
-    print(path_response.text)
     path_id = path_json['response']['flowAnalysisId']
     return path_id
 
@@ -708,7 +707,7 @@ def get_path_visualisation_info(path_id, dnac_jwt_token):
     This function will return the path visualisation details for the path visualisation {id}
     :param path_id: DNA C path visualisation id
     :param dnac_jwt_token: DNA C token
-    :return: Path visualisation details in a list [device,interface_out,interface_in,device...]
+    :return: Path visualisation status, and the details in a list [device,interface_out,interface_in,device...]
     """
 
     url = DNAC_URL + '/api/v1/flow-analysis/' + path_id
@@ -740,5 +739,17 @@ def get_path_visualisation_info(path_id, dnac_jwt_token):
     return path_status, path_list
 
 
-# dnac_token = get_dnac_jwt_token(DNAC_AUTH)
-# pprint(get_template_name_info('Remote_Routing_Config', 'ERNA', dnac_token))
+dnac_token = get_dnac_jwt_token(DNAC_AUTH)
+
+# templ_id = deploy_template('DC_Routing_Config', 'ERNA', 'PDX-RO', dnac_token)
+# print(templ_id)
+
+# time.sleep(5)
+# check_template_deployment_status(templ_id, dnac_token)
+
+#path_id = create_path_visualisation('10.93.140.35', '172.16.202.1', dnac_token)
+
+#time.sleep(15)
+
+#path_info = get_path_visualisation_info(path_id, dnac_token)
+#pprint(path_info)

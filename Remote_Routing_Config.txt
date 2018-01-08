@@ -1,7 +1,7 @@
-router eigrp 201
- network 172.16.201.2 0.0.0.0
- redistribute static route-map REMOTE
 ip route $IPD 255.255.255.255 Vlan$VlanId
 ip prefix-list HOST seq 5 permit $IPD/32
 route-map REMOTE permit 10
  match ip address prefix-list HOST
+router eigrp 201
+ network 172.16.201.2 0.0.0.0
+ redistribute static route-map REMOTE
