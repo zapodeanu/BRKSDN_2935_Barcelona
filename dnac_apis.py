@@ -173,7 +173,7 @@ def update_commit_template(template_name, project_name, cli_template, dnac_jwt_t
 
     # get the template id
     template_id = get_template_id(template_name, project_name, dnac_jwt_token)
-    url = DNAC_URL +'/api/v1/template-programmer/template'
+    url = DNAC_URL + '/api/v1/template-programmer/template'
 
     # prepare the template param to sent to DNA C
     payload = {
@@ -353,6 +353,7 @@ def get_device_id_name(device_name, dnac_jwt_token):
     :param dnac_jwt_token: DNA C token
     :return:
     """
+    device_id = None
     device_info = get_all_device_info(dnac_jwt_token)
     device_list = device_info['response']
     for device in device_list:
@@ -368,6 +369,7 @@ def get_device_management_ip(device_name, dnac_jwt_token):
     :param dnac_jwt_token: DNA C token
     :return: the management ip address
     """
+    device_ip = None
     device_info = get_all_device_info(dnac_jwt_token)
     device_list = device_info['response']
     for device in device_list:
@@ -444,6 +446,7 @@ def get_site_id(site_name, dnac_jwt_token):
     :param dnac_jwt_token: DNA C token
     :return: DNA C site id
     """
+    site_id = None
     url = DNAC_URL + '/api/v1/group?groupType=SITE'
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     site_response = requests.get(url, headers=header, verify=False)
@@ -506,6 +509,7 @@ def get_building_id(building_name, dnac_jwt_token):
     :param dnac_jwt_token: DNA C token
     :return: DNA C building id
     """
+    building_id = None
     url = DNAC_URL + '/api/v1/group?groupType=SITE'
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     building_response = requests.get(url, headers=header, verify=False)
@@ -578,6 +582,7 @@ def get_floor_id(building_name, floor_name, dnac_jwt_token):
     :param dnac_jwt_token: DNA C token
     :return: floor_id
     """
+    floor_id = None
     building_id = get_building_id(building_name, dnac_jwt_token)
     url = DNAC_URL + '/api/v1/group' + building_id + '/child?level=1'
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
@@ -739,17 +744,3 @@ def get_path_visualisation_info(path_id, dnac_jwt_token):
     return path_status, path_list
 
 
-dnac_token = get_dnac_jwt_token(DNAC_AUTH)
-
-# templ_id = deploy_template('DC_Routing_Config', 'ERNA', 'PDX-RO', dnac_token)
-# print(templ_id)
-
-# time.sleep(5)
-# check_template_deployment_status(templ_id, dnac_token)
-
-#path_id = create_path_visualisation('10.93.140.35', '172.16.202.1', dnac_token)
-
-#time.sleep(15)
-
-#path_info = get_path_visualisation_info(path_id, dnac_token)
-#pprint(path_info)
