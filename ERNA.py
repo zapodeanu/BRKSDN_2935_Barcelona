@@ -7,7 +7,7 @@ import requests
 import json
 import time
 import datetime
-import requests.packages.urllib3
+import urllib3
 import logging
 import sys
 import select
@@ -18,10 +18,12 @@ import select
 import utils
 import spark_apis
 import dnac_apis
+import asav_apis
+import init
 
-
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning  # for insecure https warnings
 from requests.auth import HTTPBasicAuth  # for Basic Auth
+
 from PIL import Image, ImageDraw, ImageFont
 
 from init import SPARK_AUTH, SPARK_URL, TROPO_KEY
@@ -29,16 +31,16 @@ from init import SPARK_AUTH, SPARK_URL, TROPO_KEY
 from init import DNAC_URL, DNAC_USER, DNAC_PASS
 DNAC_AUTH = HTTPBasicAuth(DNAC_USER, DNAC_PASS)
 
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
+from init import ASAv_URL, ASAv_USER, ASAv_PASSW
+ASAv_AUTH = HTTPBasicAuth(ASAv_USER, ASAv_PASSW)
+
+
+urllib3.disable_warnings(InsecureRequestWarning)  # disable insecure https warnings
+
 
 # The following declarations need to be updated based on your lab environment
 
-CMX_URL = 'https://172.16.11.27/'
-CMX_USER = 'python'
-CMX_PASSW = 'Clive!17'
-CMX_AUTH = HTTPBasicAuth(CMX_USER, CMX_PASSW)
 
-SPARK_URL = 'https://api.ciscospark.com/v1'
 ROOM_NAME = 'ERNA'
 
 ASAv_URL = 'https://10.93.130.40'
@@ -72,7 +74,7 @@ def main():
     # the user will be asked if interested to run in demo mode
     # production (logging to files - erna_log.log, erna_err.log))
 
-    #user_input = utils.get_input_timeout('If running in Demo Mode please enter y ', 10)
+    # user_input = utils.get_input_timeout('If running in Demo Mode please enter y ', 10)
 
     user_input = 'y'
     if user_input != 'y':
@@ -204,7 +206,6 @@ def main():
 
     time.sleep(1)
 
-
     # deployment of interface configuration files to the Remote router
 
     remote_int_config_file = 'Remote_Interface_Config.txt'
@@ -239,7 +240,6 @@ def main():
 
     time.sleep(1)
 
-
     # check the deployment status after waiting for all jobs to complete - 5 seconds
     print('\nWait for DNA Center to complete template deployments')
     time.sleep(10)
@@ -250,7 +250,7 @@ def main():
     # remote_routing_status = dnac_apis.check_template_deployment_status(depl_id_remote_routing, dnac_token)
 
     # print(dc_interface_status, dc_routing_status, remote_interface_status, remote_routing_status)
-    #if dc_interface_status == 'SUCCESS' and dc_routing_status ==  'SUCCESS' and remote_interface_status == 'SUCCESS' and
+    # if dc_interface_status == 'SUCCESS' and dc_routing_status ==  'SUCCESS' and remote_interface_status == 'SUCCESS' and
         #remote_routing_status == 'SUCCESS':
         #print('\nAll templates deployment have been successful\n')
 
