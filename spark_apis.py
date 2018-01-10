@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 
 
 # developed by Gabi Zapodeanu, TSA, GPO, Cisco Systems
@@ -6,19 +7,16 @@
 # this module includes common utilized functions to create applications using Spark APIs
 
 
-# !/usr/bin/env python3
-
-
 import requests
 import json
-import requests.packages.urllib3
+import urllib3
 
 from requests_toolbelt import MultipartEncoder  # required to encode messages uploaded to Spark
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning  # for insecure https warnings
 
 from init import SPARK_AUTH, SPARK_URL
 
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
+urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
 
 
 def create_team(team_name):

@@ -1,7 +1,8 @@
+#! /usr/bin/env python3
+
 
 # developed by Gabi Zapodeanu, TSA, GPO, Cisco Systems
 
-#!/usr/bin/env python3
 
 import requests
 import json
