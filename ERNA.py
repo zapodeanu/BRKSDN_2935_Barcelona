@@ -1,7 +1,10 @@
+#! /usr/bin/env python3
+
 
 # developed by Gabi Zapodeanu, TSA, GPO, Cisco Systems
 
-# !/usr/bin/env python3
+
+# import Python packages
 
 import requests
 import json
@@ -11,9 +14,9 @@ import urllib3
 import logging
 import sys
 import select
+import re
 
-
-# import provided modules
+# import functions modules
 
 import utils
 import spark_apis
@@ -21,43 +24,37 @@ import dnac_apis
 import asav_apis
 import init
 
+from PIL import Image, ImageDraw, ImageFont  # for image processing
 from urllib3.exceptions import InsecureRequestWarning  # for insecure https warnings
 from requests.auth import HTTPBasicAuth  # for Basic Auth
 
-from PIL import Image, ImageDraw, ImageFont
 
 from init import SPARK_AUTH, SPARK_URL, TROPO_KEY
-
+from init import GOOGLE_API_KEY
 from init import DNAC_URL, DNAC_USER, DNAC_PASS
-DNAC_AUTH = HTTPBasicAuth(DNAC_USER, DNAC_PASS)
-
 from init import ASAv_URL, ASAv_USER, ASAv_PASSW
-ASAv_AUTH = HTTPBasicAuth(ASAv_USER, ASAv_PASSW)
+from init import UCSD_URL, UCSD_KEY
 
+DNAC_AUTH = HTTPBasicAuth(DNAC_USER, DNAC_PASS)
+ASAv_AUTH = HTTPBasicAuth(ASAv_USER, ASAv_PASSW)
 
 urllib3.disable_warnings(InsecureRequestWarning)  # disable insecure https warnings
 
-
 # The following declarations need to be updated based on your lab environment
 
-
+# Spark related
 ROOM_NAME = 'ERNA'
+IT_ENG_EMAIL = 'gabriel.zapodeanu@gmail.com'
 
-ASAv_URL = 'https://10.93.130.40'
-ASAv_USER = 'python'
-ASAv_PASSW = 'cisco'
-ASAv_AUTH = HTTPBasicAuth(ASAv_USER, ASAv_PASSW)
-
-
-UCSD_URL = 'https://10.94.132.69'
-UCSD_USER = 'gzapodea'
-UCSD_PASSW = 'cisco.123'
-UCSD_KEY = '1D3FD49A0D474481AE7A4C6BD33EC82E'
+# UCSD related
 UCSD_CONNECT_FLOW = 'Gabi_VM_Connect_VLAN_10'
 UCSD_DISCONNECT_FLOW = 'Gabi_VM_Disconnect_VLAN_10'
 
-ROOM_NAME = 'ERNA'
-IT_ENG_EMAIL = 'gabriel.zapodeanu@gmail.com'
+# VDI IPv4 address
+VDI_IP = '172.16.203.50'
+
+# ASAv
+OUTSIDE_INT = 'outside'
 
 
 def main():
@@ -71,7 +68,7 @@ def main():
     # save the initial stdout
     initial_sys = sys.stdout
 
-    # the user will be asked if interested to run in demo mode
+    # the user will be asked if interested to run in demo mode or in
     # production (logging to files - erna_log.log, erna_err.log))
 
     # user_input = utils.get_input_timeout('If running in Demo Mode please enter y ', 10)
@@ -94,8 +91,8 @@ def main():
 
     # the local date and time when the code will start execution
 
-    DATE_TIME = str(datetime.datetime.now().replace(microsecond=0))
-    print('\nThe app started running at this time ' + DATE_TIME)
+    date_time = str(datetime.datetime.now().replace(microsecond=0))
+    print('\nThe app started running at this time ' + date_time)
 
     user_input = 'y'
     user_input = utils.get_input_timeout('Enter y to skip next section : ', 10)
@@ -151,7 +148,7 @@ def main():
     # execute UCSD workflow to connect VDI to VLAN, power on VDI
     # execute_ucsd_workflow(ucsd_key, UCSD_CONNECT_FLOW)
 
-    print('UCSD connect flow executed')
+    # print('UCSD connect flow executed')
 
     # get the WJT Auth token to access DNA
     dnac_token = dnac_apis.get_dnac_jwt_token(DNAC_AUTH)
@@ -159,16 +156,16 @@ def main():
 
     # IPD IP address - DNS lookup if available
 
-    ipd_ip = '10.93.140.35'
+    IPD_IP = '10.93.140.35'
 
     # locate IPD in the environment using DNA C
-    ipd_location_info = dnac_apis.locate_client_ip(ipd_ip, dnac_token)
+    ipd_location_info = dnac_apis.locate_client_ip(IPD_IP, dnac_token)
 
-    remote_device_hostname = ipd_location_info[0]
-    vlan_number = ipd_location_info[2]
-    interface_name = ipd_location_info[1]
+    remote_device_hostname = ipd_location_info[0]  # the network device the IPD is connected to
+    vlan_number = ipd_location_info[2]  # the access VLAN number
+    interface_name = ipd_location_info[1]  # the interface number is connected to
 
-    remote_device_location = dnac_apis.get_device_location(remote_device_hostname, dnac_token)
+    remote_device_location = dnac_apis.get_device_location(remote_device_hostname, dnac_token)  # network device location
 
     print('\nThe IPD is connected to:')
     print('this interface:', interface_name, ', access VLAN:', vlan_number)
@@ -176,67 +173,65 @@ def main():
     print('located:       ', remote_device_location)
 
     # deployment of interface configuration files to the DC router
-
     dc_device_hostname = 'PDX-RO'
-    project = 'ERNA'
+    template_project = 'ERNA'
     print('\nThe DC device name is: ', dc_device_hostname)
 
     dc_int_config_file = 'DC_Interface_Config.txt'
-    dc_int_templ = dc_int_config_file.split('.')[0]
+    dc_int_templ = dc_int_config_file.split('.')[0]  # select the template name from the template file
 
-    cli_file = open(dc_int_config_file, 'r')
-    cli_config = cli_file.read()
+    cli_file = open(dc_int_config_file, 'r')  # open file with the template
+    cli_config = cli_file.read()  # read the file
 
-    dnac_apis.upload_template(dc_int_templ, project, cli_config, dnac_token)
-    depl_id_dc_int = dnac_apis.deploy_template(dc_int_templ, project, dc_device_hostname, dnac_token)
+    dnac_apis.upload_template(dc_int_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
+    depl_id_dc_int = dnac_apis.deploy_template(dc_int_templ, template_project, dc_device_hostname, dnac_token)  # deploy
     time.sleep(1)
 
     # deployment of routing configuration files to the DC router
-
     dc_rout_config_file = 'DC_Routing_Config.txt'
-    dc_rout_templ = dc_rout_config_file.split('.')[0]
+    dc_rout_templ = dc_rout_config_file.split('.')[0]  # select the template name from the template file
 
-    cli_file = open(dc_rout_config_file, 'r')
-    cli_config = cli_file.read()
+    cli_file = open(dc_rout_config_file, 'r')  # open file with the template
+    cli_config = cli_file.read()  # read the file
 
-    dnac_apis.upload_template(dc_rout_templ, project, cli_config, dnac_token)
-    depl_id_dc_routing = dnac_apis.deploy_template(dc_rout_templ, project, dc_device_hostname, dnac_token)
+    dnac_apis.upload_template(dc_rout_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
+    depl_id_dc_routing = dnac_apis.deploy_template(dc_rout_templ, template_project, dc_device_hostname, dnac_token)
 
-    print('\nDeployment of the configurations to the DC Router started')
+    print('\nDeployment of the configurations to the DC Router, ', dc_device_hostname, 'started')
 
     time.sleep(1)
 
     # deployment of interface configuration files to the Remote router
 
     remote_int_config_file = 'Remote_Interface_Config.txt'
-    remote_int_templ = remote_int_config_file.split('.')[0]
+    remote_int_templ = remote_int_config_file.split('.')[0]  # select the template name from the template file
 
-    cli_file = open(remote_int_config_file, 'r')
-    cli_config = cli_file.read()
+    cli_file = open(remote_int_config_file, 'r')  # open file with the template
+    cli_config = cli_file.read()  # read the file
 
-    dnac_apis.upload_template(remote_int_templ, project, cli_config, dnac_token)
-    depl_id_remote_int = dnac_apis.deploy_template(remote_int_templ, project, remote_device_hostname, dnac_token)
+    dnac_apis.upload_template(remote_int_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
+    depl_id_remote_int = dnac_apis.deploy_template(remote_int_templ, template_project, remote_device_hostname, dnac_token)   # deploy
     time.sleep(1)
 
     # deployment of routing configuration files to the Remote router
 
     remote_rout_config_file = 'Remote_Routing_Config.txt'
-    remote_rout_templ = remote_rout_config_file.split('.')[0]
+    remote_rout_templ = remote_rout_config_file.split('.')[0]  # select the template name from the template file
 
-    cli_file = open(remote_rout_config_file, 'r')
-    cli_config = cli_file.read()
+    cli_file = open(remote_rout_config_file, 'r')  # open file with the template
+    cli_config = cli_file.read()  # read the file
 
-    # update the template with the local info for the IPD
-    # replace the $VlanId with the local VLAN access
+    # update the template with the localized info for the IPD
+    # replace the $VlanId with the localized VLAN access
     # replace the $IPD with the IPD ip address
 
-    cli_config = cli_config.replace('$IPD', ipd_ip)
+    cli_config = cli_config.replace('$IPD', IPD_IP)
     cli_config = cli_config.replace('$VlanId', vlan_number)
 
-    dnac_apis.upload_template(remote_rout_templ, project, cli_config, dnac_token)
-    depl_id_remote_routing = dnac_apis.deploy_template(remote_rout_templ, project, remote_device_hostname, dnac_token)
+    dnac_apis.upload_template(remote_rout_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
+    depl_id_remote_routing = dnac_apis.deploy_template(remote_rout_templ, template_project, remote_device_hostname, dnac_token)   # deploy
 
-    print('\nDeployment of the configurations to the Remote Router started')
+    print('\nDeployment of the configurations to the Remote device, ', remote_device_hostname, ' started')
 
     time.sleep(1)
 
@@ -255,30 +250,35 @@ def main():
         #print('\nAll templates deployment have been successful\n')
 
     # synchronization of devices configured - DC and Remote Router
-
     dc_sync_status = dnac_apis.sync_device(dc_device_hostname, dnac_token)[0]
     remote_sync_status = dnac_apis.sync_device(remote_device_hostname, dnac_token)[0]
 
     if dc_sync_status == 202:
         print('\nDNA Center started the DC Router resync')
-    if remote_sync_status == 200:
+    if remote_sync_status == 202:
         print('\nDNA Center started the Remote Router resync')
     print('\nWait for DNA Center to complete the resync of the two devices')
-    time.sleep(240)
+    time.sleep(120)
 
-    path_visualisation_id = dnac_apis.create_path_visualisation('172.16.202.1', ipd_ip, dnac_token)
+    # start a path visualization to check the path segmentation
+    path_visualization_id = dnac_apis.create_path_visualization('172.16.202.1', IPD_IP, dnac_token)
 
     print('\nWait for Path Visualization to complete')
     time.sleep(20)
 
-    path_visualisation_info = dnac_apis.get_path_visualisation_info(path_visualisation_id, dnac_token)
-    print('\nPath visualisation status: ', path_visualisation_info[0])
-    print('\nPath visualisation details: ', path_visualisation_info[1])
-    utils.pprint(path_visualisation_info)
+    path_visualization_info = dnac_apis.get_path_visualization_info(path_visualization_id, dnac_token)
+    print('\nPath visualization status: ', path_visualization_info[0])
+    print('\nPath visualization details: ', path_visualization_info[1])
+    utils.pprint(path_visualization_info)
 
+    # create ASAv outside interface ACL to allow traffic
 
-    #create ASAv outside interface ACL to allow traffic
-    ######################
+    outside_acl_id = asav_apis.get_asav_access_list(OUTSIDE_INT)
+    asav_status = asav_apis.create_asav_access_list(outside_acl_id, OUTSIDE_INT, VDI_IP, IPD_IP)
+    if asav_status == 201:
+        print('ASAv access list updated to allow traffic from ', VDI_IP, ' to ', VDI_IP, ' on the interface ', OUTSIDE_INT)
+    else:
+        print('Error while updating the ASAv access list on the interface ', OUTSIDE_INT)
 
     # Spark notification
 
@@ -288,8 +288,9 @@ def main():
 
     # Tropo notification - voice call
 
-    # voice_notification_result = tropo_notification()
-    # spark_apis.post_room_message(ROOM_NAME, 'Tropo Voice Notification: ' + voice_notification_result)
+    voice_notification_result = tropo_notification()
+
+    spark_apis.post_room_message(ROOM_NAME, 'Tropo Voice Notification: ' + voice_notification_result)
 
     # time.sleep(timer)
     input('Input any key to continue ! ')
@@ -306,8 +307,8 @@ def main():
     cli_file = open(dc_del_file, 'r')
     cli_config = cli_file.read()
 
-    dnac_apis.upload_template(dc_del_templ, project, cli_config, dnac_token)
-    depl_id_dc_del = dnac_apis.deploy_template(dc_del_templ, project, dc_device_hostname, dnac_token)
+    dnac_apis.upload_template(dc_del_templ, template_project, cli_config, dnac_token)
+    depl_id_dc_del = dnac_apis.deploy_template(dc_del_templ, template_project, dc_device_hostname, dnac_token)
 
     print('\nDC Router restored to the baseline configuration')
 
@@ -325,21 +326,29 @@ def main():
     # replace the $VlanId with the local VLAN access
     # replace the $IPD with the IPD ip address
 
-    cli_config = cli_config.replace('$IPD', ipd_ip)
+    cli_config = cli_config.replace('$IPD', IPD_IP)
     cli_config = cli_config.replace('$VlanId', vlan_number)
 
-    dnac_apis.upload_template(remote_del_templ, project, cli_config, dnac_token)
-    depl_id_remote_del = dnac_apis.deploy_template(remote_del_templ, project, remote_device_hostname, dnac_token)
+    dnac_apis.upload_template(remote_del_templ, template_project, cli_config, dnac_token)
+    depl_id_remote_del = dnac_apis.deploy_template(remote_del_templ, template_project, remote_device_hostname, dnac_token)
 
     print('\nRemote Router restored to the baseline configuration')
 
     time.sleep(1)
 
+    # remove the ASAv outside interface ACLE that allowed traffic between VDI and IPD
+
+    outside_acl_id = asav_apis.get_asav_access_list(OUTSIDE_INT)
+    asav_status = asav_apis.delete_asav_access_list(outside_acl_id, OUTSIDE_INT)
+    if asav_status == 204:
+        print('ASAv access list on the interface ', OUTSIDE_INT, ' restored to the baseline configuration')
+    else:
+        print('Error while restoring the ASAv access list on the interface ', OUTSIDE_INT)
 
     # execute UCSD workflow to discoconnect VDI to VLAN, power on VDI
     # execute_ucsd_workflow(ucsd_key, UCSD_DISCONNECT_FLOW)
 
-    print('|nUCSD disconnect flow executed')
+    # print('\nUCSD disconnect flow executed')
 
     # Spark notification
 
@@ -350,8 +359,8 @@ def main():
 
     # the local date and time when the code will end execution
 
-    DATE_TIME = str(datetime.datetime.now().replace(microsecond=0))
-    print('\n\nEnd of application run at this time ', DATE_TIME)
+    date_time = str(datetime.datetime.now().replace(microsecond=0))
+    print('\n\nEnd of application run at this time ', date_time)
 
 
 if __name__ == '__main__':

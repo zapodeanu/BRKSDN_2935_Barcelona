@@ -1,26 +1,25 @@
+#! /usr/bin/env python3
 
 # developed by Gabi Zapodeanu, TSA, GPO, Cisco Systems
 
-# !/usr/bin/env python3
+# the utils module includes common utilized utility functions
 
-# this module includes common utilized utility functions
-
+import requests
 import json
 import sys
 import select
-import requests
 import time
-import requests.packages.urllib3
 import os
 import os.path
+import urllib3
 import socket  # needed for IPv4 validation
 import re  # needed for regular expressions matching
 
 from PIL import Image, ImageDraw, ImageFont  # needed for the image processing
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning
 from requests.auth import HTTPBasicAuth  # for Basic Auth
 
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
+urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
 
 
 def pprint(json_data):

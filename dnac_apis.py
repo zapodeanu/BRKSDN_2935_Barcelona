@@ -1,22 +1,26 @@
+#! /usr/bin/env python3
+
 
 # developed by Gabi Zapodeanu, TSA, GPO, Cisco Systems
 
-# !/usr/bin/env python3
 
 import requests
 import json
 import time
+import os
+import os.path
+import urllib3
+import socket
+import re
 
-import requests.packages.urllib3
-
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning  # for insecure https warnings
 from requests.auth import HTTPBasicAuth  # for Basic Auth
 
 from init import GOOGLE_API_KEY
 from init import DNAC_URL, DNAC_PASS, DNAC_USER
 
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
 
+urllib3.disable_warnings(InsecureRequestWarning)  # disable insecure https warnings
 
 DNAC_AUTH = HTTPBasicAuth(DNAC_USER, DNAC_PASS)
 
@@ -686,7 +690,7 @@ def check_task_id_status(task_id, dnac_jwt_token):
     return task_result
 
 
-def create_path_visualisation(src_ip, dest_ip, dnac_jwt_token):
+def create_path_visualization(src_ip, dest_ip, dnac_jwt_token):
     """
     This function will create a new Path Visualisation between the source IP address {src_ip} and the
     destination IP address {dest_ip}
@@ -710,7 +714,7 @@ def create_path_visualisation(src_ip, dest_ip, dnac_jwt_token):
     return path_id
 
 
-def get_path_visualisation_info(path_id, dnac_jwt_token):
+def get_path_visualization_info(path_id, dnac_jwt_token):
     """
     This function will return the path visualisation details for the path visualisation {id}
     :param path_id: DNA C path visualisation id
@@ -764,5 +768,4 @@ def check_ipv4_network_interface(ip_address, dnac_jwt_token):
         return False
 
 
-# dnac_token = get_dnac_jwt_token(DNAC_AUTH)
-
+dnac_token = get_dnac_jwt_token(DNAC_AUTH)
