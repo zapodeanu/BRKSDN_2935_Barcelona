@@ -62,5 +62,5 @@ venv.bak/
 .mypy_cache/
 /ERNA_init.py
 /.idea
-.idea/
-ERNA_init.py
+.idea/*
+init.py

@@ -24,9 +24,9 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from requests.auth import HTTPBasicAuth  # for Basic Auth
 from PIL import Image, ImageDraw, ImageFont
 
-from ERNA_init import SPARK_AUTH, SPARK_URL, TROPO_KEY
+from init import SPARK_AUTH, SPARK_URL, TROPO_KEY
 
-from ERNA_init import DNAC_URL, DNAC_USER, DNAC_PASS
+from init import DNAC_URL, DNAC_USER, DNAC_PASS
 DNAC_AUTH = HTTPBasicAuth(DNAC_USER, DNAC_PASS)
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings

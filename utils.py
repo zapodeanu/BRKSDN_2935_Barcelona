@@ -101,7 +101,7 @@ def image_annotate(in_image, out_image, text, color, font_size, x, y):
     image.save(out_image, 'PNG')  # save new image
 
 
-def validate_ipv4_address(ip_address):
+def validate_ipv4_(ip_address):
     """
     This function will validate if the provided string is a valid IPv4 address
     :param ip_address: string with the ip address
@@ -116,7 +116,8 @@ def validate_ipv4_address(ip_address):
 
 def identify_ipv4_address(configuration):
     """
-    This function will return a list of all IPv4 addresses found in the string {configuration}
+    This function will return a list of all IPv4 addresses found in the string {configuration}.
+    It will return only the IPv4 addresses found in the {ip address a.b.c.d command}
     :param configuration: string with the configuration
     :return: list of IPv4 addresses
     """

@@ -12,8 +12,8 @@ import requests.packages.urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from requests.auth import HTTPBasicAuth  # for Basic Auth
 
-from ERNA_init import GOOGLE_API_KEY
-from ERNA_init import DNAC_URL, DNAC_PASS, DNAC_USER
+from init import GOOGLE_API_KEY
+from init import DNAC_URL, DNAC_PASS, DNAC_USER
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
 
@@ -764,8 +764,5 @@ def check_ipv4_network_interface(ip_address, dnac_jwt_token):
         return False
 
 
-dnac_token = get_dnac_jwt_token(DNAC_AUTH)
+# dnac_token = get_dnac_jwt_token(DNAC_AUTH)
 
-print(check_ipv4_network_interface('10.93.130.37', dnac_token))
-
-print(locate_client_ip('10.93.130.37', dnac_token))
