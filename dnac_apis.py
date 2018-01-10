@@ -334,16 +334,19 @@ def locate_client_ip(client_ip, dnac_jwt_token):
     Call to DNA C - api/v1/host?hostIp={client_ip}
     :param client_ip: Client IP Address
     :param dnac_jwt_token: DNA C token
-    :return: hostname, interface_name, vlan_id
+    :return: hostname, interface_name, vlan_id, or None, if the client does not exist
     """
     url = DNAC_URL + '/api/v1/host?hostIp=' + client_ip
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     response = requests.get(url, headers=header, verify=False)
     client_info = response.json()
-    hostname = client_info['response'][0]['connectedNetworkDeviceName']
-    interface_name = client_info['response'][0]['connectedInterfaceName']
-    vlan_id = client_info['response'][0]['vlanId']
-    return hostname, interface_name, vlan_id
+    try:
+        hostname = client_info['response'][0]['connectedNetworkDeviceName']
+        interface_name = client_info['response'][0]['connectedInterfaceName']
+        vlan_id = client_info['response'][0]['vlanId']
+        return hostname, interface_name, vlan_id
+    except:
+        return None
 
 
 def get_device_id_name(device_name, dnac_jwt_token):
@@ -744,3 +747,25 @@ def get_path_visualisation_info(path_id, dnac_jwt_token):
     return path_status, path_list
 
 
+def check_ipv4_network_interface(ip_address, dnac_jwt_token):
+    """
+    This function will check if the provided IPv4 address is configured on any network interfaces
+    :param ip_address: IPv4 address
+    :param dnac_jwt_token: DNA C token
+    :return: True/False
+    """
+    url = DNAC_URL + '/api/v1/network-device/config'
+    print(url)
+    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
+    response = requests.get(url, headers=header, verify=False)
+    if ip_address in response.text:
+        return True
+    else:
+        return False
+
+
+dnac_token = get_dnac_jwt_token(DNAC_AUTH)
+
+print(check_ipv4_network_interface('10.93.130.37', dnac_token))
+
+print(locate_client_ip('10.93.130.37', dnac_token))
