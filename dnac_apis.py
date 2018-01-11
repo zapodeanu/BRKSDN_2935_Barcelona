@@ -60,7 +60,21 @@ def get_all_device_info(dnac_jwt_token):
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     all_device_response = requests.get(url, headers=header, verify=False)
     all_device_info = all_device_response.json()
-    return all_device_info
+    return all_device_info['response']
+
+
+def get_device_info(device_id, dnac_jwt_token):
+    """
+    This function will retrieve all the information for the device with the DNA C device id
+    :param device_id: DNA C device_id
+    :param dnac_jwt_token: DNA C token
+    :return: device info
+    """
+    url = DNAC_URL + '/api/v1/network-device' + device_id
+    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
+    device_response = requests.get(url, headers=header, verify=False)
+    device_info = device_response.json()
+    return device_info['response']
 
 
 def get_project_id(project_name, dnac_jwt_token):
@@ -332,6 +346,24 @@ def check_template_deployment_status(depl_task_id, dnac_jwt_token):
     return deployment_status
 
 
+def get_client_info(client_ip, dnac_jwt_token):
+    """
+    This function will retrieve all the information from the client with the IP address
+    :param client_ip: client IPv4 address
+    :param dnac_jwt_token: DNA C token
+    :return: client info, or {None} if client does not found
+    """
+    url = DNAC_URL + '/api/v1/host?hostIp=' + client_ip
+    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
+    response = requests.get(url, headers=header, verify=False)
+    client_json = response.json()
+    try:
+        client_info = client_json['response'][0]
+        return client_info
+    except:
+        return None
+
+
 def locate_client_ip(client_ip, dnac_jwt_token):
     """
     Locate a wired client device in the infrastructure by using the client IP address
@@ -340,16 +372,14 @@ def locate_client_ip(client_ip, dnac_jwt_token):
     :param dnac_jwt_token: DNA C token
     :return: hostname, interface_name, vlan_id, or None, if the client does not exist
     """
-    url = DNAC_URL + '/api/v1/host?hostIp=' + client_ip
-    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
-    response = requests.get(url, headers=header, verify=False)
-    client_info = response.json()
-    try:
-        hostname = client_info['response'][0]['connectedNetworkDeviceName']
-        interface_name = client_info['response'][0]['connectedInterfaceName']
-        vlan_id = client_info['response'][0]['vlanId']
+
+    client_info = get_client_info(client_ip, dnac_jwt_token)
+    if client_info is not None:
+        hostname = client_info['connectedNetworkDeviceName']
+        interface_name = client_info['connectedInterfaceName']
+        vlan_id = client_info['vlanId']
         return hostname, interface_name, vlan_id
-    except:
+    else:
         return None
 
 
@@ -361,12 +391,31 @@ def get_device_id_name(device_name, dnac_jwt_token):
     :return:
     """
     device_id = None
-    device_info = get_all_device_info(dnac_jwt_token)
-    device_list = device_info['response']
+    device_list = get_all_device_info(dnac_jwt_token)
     for device in device_list:
         if device['hostname'] == device_name:
             device_id = device['id']
     return device_id
+
+
+def get_device_status(device_name, dnac_jwt_token):
+    """
+    This fucntion will return the reachability status for the network device with the name {device_name}
+    :param device_name: device name
+    :param dnac_jwt_token: DNA C token
+    :return: status - {UNKNOWN} to locate a device in the database,
+                      {SUCCESS} device reachable
+                      {FAILURE} device not reachable
+    """
+    device_id = get_device_id_name(device_name, dnac_jwt_token)
+    if device_id is None:
+        return 'UNKNOWN'
+    else:
+        device_info = get_device_info(device_id, dnac_jwt_token)
+        if device_info['reachabilityStatus'] == 'Reachable':
+            return 'SUCCESS'
+        else:
+            return 'FAILURE'
 
 
 def get_device_management_ip(device_name, dnac_jwt_token):
@@ -377,8 +426,7 @@ def get_device_management_ip(device_name, dnac_jwt_token):
     :return: the management ip address
     """
     device_ip = None
-    device_info = get_all_device_info(dnac_jwt_token)
-    device_list = device_info['response']
+    device_list = get_all_device_info(dnac_jwt_token)
     for device in device_list:
         if device['hostname'] == device_name:
             device_ip = device['managementIpAddress']
@@ -759,7 +807,6 @@ def check_ipv4_network_interface(ip_address, dnac_jwt_token):
     :return: True/False
     """
     url = DNAC_URL + '/api/v1/network-device/config'
-    print(url)
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     response = requests.get(url, headers=header, verify=False)
     if ip_address in response.text:
@@ -768,4 +815,4 @@ def check_ipv4_network_interface(ip_address, dnac_jwt_token):
         return False
 
 
-dnac_token = get_dnac_jwt_token(DNAC_AUTH)
+# dnac_token = get_dnac_jwt_token(DNAC_AUTH)
