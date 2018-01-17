@@ -804,15 +804,67 @@ def check_ipv4_network_interface(ip_address, dnac_jwt_token):
     This function will check if the provided IPv4 address is configured on any network interfaces
     :param ip_address: IPv4 address
     :param dnac_jwt_token: DNA C token
-    :return: True/False
+    :return: None, or device_hostname and interface_name
     """
-    url = DNAC_URL + '/api/v1/network-device/config'
+    url = DNAC_URL + '/api/v1/interface/ip-address/' + ip_address
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     response = requests.get(url, headers=header, verify=False)
-    if ip_address in response.text:
-        return True
+    response_json = response.json()
+    try:
+        response_info = response_json['response'][0]
+        interface_name = response_info['portName']
+        device_id = response_info['deviceId']
+        device_info = get_device_info(device_id, dnac_jwt_token)
+        device_hostname = device_info['hostname']
+        return device_hostname, interface_name
+    except:
+        device_info = get_device_info_ip(ip_address, dnac_jwt_token)  # required for AP's
+        device_hostname = device_info['hostname']
+        return (device_hostname,)
+
+
+def get_device_info_ip(ip_address, dnac_jwt_token):
+    """
+    This function will retrieve the device information for the device with the management IPv4 address {ip_address}
+    :param ip_address: device management ip address
+    :param dnac_jwt_token: DNA C token
+    :return: device information, or None
+    """
+    url = DNAC_URL + '/api/v1/network-device/ip-address/' + ip_address
+    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
+    response = requests.get(url, headers=header, verify=False)
+    response_json = response.json()
+    device_info = response_json['response']
+    if 'errorCode' == 'Not found':
+        return None
     else:
-        return False
+        return device_info
 
 
-# dnac_token = get_dnac_jwt_token(DNAC_AUTH)
+def check_ipv4_address(ipv4_address, dnac_jwt_token):
+    """
+    This function will find if the IPV4 address is configured on any network interfaces or used by any hosts.
+    :param ipv4_address: IPv4 address
+    :param dnac_jwt_token: DNA C token
+    :return: True/False
+    """
+    # check against network devices interfaces
+    try:
+        device_info = check_ipv4_network_interface(ipv4_address, dnac_token)
+        return True
+    except:
+        # check against any hosts
+        try:
+            client_info = get_client_info(ipv4_address, dnac_token)
+            if client_info is not None:
+                return True
+        except:
+            pass
+    return False
+
+
+
+dnac_token = get_dnac_jwt_token(DNAC_AUTH)
+print(check_ipv4_address('10.93.130.46', dnac_token))
+
+
