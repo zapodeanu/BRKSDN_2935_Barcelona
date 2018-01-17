@@ -864,7 +864,5 @@ def check_ipv4_address(ipv4_address, dnac_jwt_token):
 
 
 
-dnac_token = get_dnac_jwt_token(DNAC_AUTH)
-print(check_ipv4_address('10.93.130.46', dnac_token))
 
 
