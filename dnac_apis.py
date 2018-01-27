@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-
 # developed by Gabi Zapodeanu, TSA, GPO, Cisco Systems
 
 
@@ -301,6 +300,31 @@ def get_template_id(template_name, project_name, dnac_jwt_token):
     return template_id
 
 
+def get_template_id_version(template_name, project_name, dnac_jwt_token):
+    """
+    This function will return the latest version template id for the DNA C template with the name {template_name},
+    part of the project with the name {project_name}
+    :param template_name: name of the template
+    :param project_name: Project name
+    :param dnac_jwt_token: DNA C token
+    :return: DNA C template id for the last version
+    """
+    project_id = get_project_id(project_name, dnac_jwt_token)
+    url = DNAC_URL + '/api/v1/template-programmer/template?projectId=' + project_id + '&includeHead=false'
+    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
+    response = requests.get(url, headers=header, verify=False)
+    project_json = response.json()
+    for template in project_json:
+        if template['name'] == template_name:
+            version = 0
+            versions_info = template['versionsInfo']
+            for ver in versions_info:
+                if int(ver['version']) > version:
+                    template_id_ver = ver['id']
+                    version = int(ver['version'])
+    return template_id_ver
+
+
 def deploy_template(template_name, project_name, device_name, dnac_jwt_token):
     """
     This function will deploy the template with the name {template_name} to the network device with the name
@@ -312,7 +336,7 @@ def deploy_template(template_name, project_name, device_name, dnac_jwt_token):
     :return: the deployment task id
     """
     device_management_ip = get_device_management_ip(device_name, dnac_jwt_token)
-    template_id = get_template_id(template_name, project_name, dnac_jwt_token)
+    template_id = get_template_id_version(template_name, project_name, dnac_jwt_token)
     payload = {
             "templateId": template_id,
             "targetInfo": [
@@ -341,7 +365,6 @@ def check_template_deployment_status(depl_task_id, dnac_jwt_token):
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     response = requests.get(url, headers=header, verify=False)
     response_json = response.json()
-    pprint(response_json)
     deployment_status = response_json["status"]
     return deployment_status
 
@@ -738,9 +761,9 @@ def check_task_id_status(task_id, dnac_jwt_token):
     return task_result
 
 
-def create_path_visualization(src_ip, dest_ip, dnac_jwt_token):
+def create_path_trace(src_ip, dest_ip, dnac_jwt_token):
     """
-    This function will create a new Path Visualisation between the source IP address {src_ip} and the
+    This function will create a new Path Trace between the source IP address {src_ip} and the
     destination IP address {dest_ip}
     :param src_ip: Source IP address
     :param dest_ip: Destination IP address
@@ -762,9 +785,9 @@ def create_path_visualization(src_ip, dest_ip, dnac_jwt_token):
     return path_id
 
 
-def get_path_visualization_info(path_id, dnac_jwt_token):
+def get_path_trace_info(path_id, dnac_jwt_token):
     """
-    This function will return the path visualisation details for the path visualisation {id}
+    This function will return the path trace details for the path visualisation {id}
     :param path_id: DNA C path visualisation id
     :param dnac_jwt_token: DNA C token
     :return: Path visualisation status, and the details in a list [device,interface_out,interface_in,device...]
@@ -774,8 +797,6 @@ def get_path_visualization_info(path_id, dnac_jwt_token):
     header = {'accept': 'application/json', 'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     path_response = requests.get(url, headers=header, verify=False)
     path_json = path_response.json()
-    print(path_response.status_code)
-    pprint(path_json)
     path_info = path_json['response']
     path_status = path_info['request']['status']
     path_list = []
@@ -861,8 +882,6 @@ def check_ipv4_address(ipv4_address, dnac_jwt_token):
         except:
             pass
     return False
-
-
 
 
 

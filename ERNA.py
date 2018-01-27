@@ -23,6 +23,7 @@ import spark_apis
 import dnac_apis
 import asav_apis
 import init
+import netconf_restconf
 
 from PIL import Image, ImageDraw, ImageFont  # for image processing
 from urllib3.exceptions import InsecureRequestWarning  # for insecure https warnings
@@ -44,7 +45,7 @@ urllib3.disable_warnings(InsecureRequestWarning)  # disable insecure https warni
 
 # Spark related
 ROOM_NAME = 'ERNA'
-IT_ENG_EMAIL = 'gabriel.zapodeanu@gmail.com'
+from init import APPROVER_EMAIL
 
 # UCSD related
 UCSD_CONNECT_FLOW = 'Gabi_VM_Connect_VLAN_10'
@@ -64,6 +65,9 @@ def main():
     The code will map this IP-enabled device to the IP address {172.16.41.55}
     Access will be provisioned to allow connectivity from DMZ VDI to IPD
     """
+
+    last_person_email = 'gzapodea@cisco.com'
+    timer = 2
 
     # save the initial stdout
     initial_sys = sys.stdout
@@ -106,7 +110,7 @@ def main():
             print('- ', ROOM_NAME, ' -  Spark room created')
 
             # invite membership to the room
-            spark_apis.add_room_membership(spark_room_id, IT_ENG_EMAIL)
+            spark_apis.add_room_membership(spark_room_id, APPROVER_EMAIL)
 
             spark_apis.post_room_message(ROOM_NAME, 'To require access enter :  IPD')
             spark_apis.post_room_message(ROOM_NAME, 'Ready for input!')
@@ -140,15 +144,10 @@ def main():
                 spark_apis.post_room_message(ROOM_NAME, 'Ready for input!')
                 last_message = 'Ready for input!'
 
-        print('\nThe user with this email: ', last_person_email, ' will be granted access to IPD for ', (timer/60), ' minutes')
+        print('\nThe user with this email: ', last_person_email, ' asked access to IPD for ', (timer/60), ' minutes')
 
-    # get UCSD API key
-    # ucsd_key = get_ucsd_api_key()
 
-    # execute UCSD workflow to connect VDI to VLAN, power on VDI
-    # execute_ucsd_workflow(ucsd_key, UCSD_CONNECT_FLOW)
 
-    # print('UCSD connect flow executed')
 
     # get the WJT Auth token to access DNA
     dnac_token = dnac_apis.get_dnac_jwt_token(DNAC_AUTH)
@@ -165,12 +164,48 @@ def main():
     vlan_number = ipd_location_info[2]  # the access VLAN number
     interface_name = ipd_location_info[1]  # the interface number is connected to
 
-    remote_device_location = dnac_apis.get_device_location(remote_device_hostname, dnac_token)  # network device location
+    device_location = dnac_apis.get_device_location(remote_device_hostname, dnac_token)  # network device location
+    location_list_info = device_location.split('/')
+    remote_device_location = location_list_info[-1]  # select the building name
 
     print('\nThe IPD is connected to:')
     print('this interface:', interface_name, ', access VLAN:', vlan_number)
     print('on this device:', remote_device_hostname)
     print('located:       ', remote_device_location)
+
+    # request approval
+
+    if user_input != 'y':
+        spark_apis.post_room_message(ROOM_NAME, ('The user with this email ' + last_person_email +
+                                                 ' asked access to IPD for ' + str(timer / 60) + ' minutes'))
+        spark_apis.post_room_message(ROOM_NAME, 'The IPD is connected to the switch ' + remote_device_hostname +
+                                     ' at our location ' + remote_device_location)
+        spark_apis.post_room_message(ROOM_NAME, 'To approve enter: Y/N')
+
+        # check for messages to identify the last message posted and the user's email who posted the message.
+        # looking for user - Director email address, and message = 'Y'
+
+        last_message = (spark_apis.last_user_message(ROOM_NAME))[0]
+
+        while last_message == 'To approve enter: Y/N':
+            time.sleep(5)
+            last_message = (spark_apis.last_user_message(ROOM_NAME))[0]
+            approver_email = (spark_apis.last_user_message(ROOM_NAME))[1]
+            if last_message == 'y' or 'Y':
+                if approver_email == APPROVER_EMAIL:
+                    print('Access Approved')
+                else:
+                    last_message = 'To approve enter: Y/N'
+
+        print('\nApproval process completed')
+
+    # get UCSD API key
+    # ucsd_key = get_ucsd_api_key()
+
+    # execute UCSD workflow to connect VDI to VLAN, power on VDI
+    # execute_ucsd_workflow(ucsd_key, UCSD_CONNECT_FLOW)
+
+    print('UCSD connect flow executed')
 
     # deployment of interface configuration files to the DC router
     dc_device_hostname = 'PDX-RO'
@@ -196,6 +231,10 @@ def main():
 
     dnac_apis.upload_template(dc_rout_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
     depl_id_dc_routing = dnac_apis.deploy_template(dc_rout_templ, template_project, dc_device_hostname, dnac_token)
+
+    # validation of dc router cli template
+
+    print('\nDC Router CLI Templates validated')
 
     print('\nDeployment of the configurations to the DC Router, ', dc_device_hostname, 'started')
 
@@ -231,6 +270,10 @@ def main():
     dnac_apis.upload_template(remote_rout_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
     depl_id_remote_routing = dnac_apis.deploy_template(remote_rout_templ, template_project, remote_device_hostname, dnac_token)   # deploy
 
+    # validation of remote cli template
+
+    print('\nRemote Device CLI Templates validated')
+
     print('\nDeployment of the configurations to the Remote device, ', remote_device_hostname, ' started')
 
     time.sleep(1)
@@ -239,15 +282,15 @@ def main():
     print('\nWait for DNA Center to complete template deployments')
     time.sleep(10)
 
-    # dc_interface_status = dnac_apis.check_template_deployment_status(depl_id_dc_int, dnac_token)
-    # dc_routing_status = dnac_apis.check_template_deployment_status(depl_id_dc_routing, dnac_token)
-    # remote_interface_status = dnac_apis.check_template_deployment_status(depl_id_remote_int, dnac_token)
-    # remote_routing_status = dnac_apis.check_template_deployment_status(depl_id_remote_routing, dnac_token)
+    dc_interface_status = dnac_apis.check_template_deployment_status(depl_id_dc_int, dnac_token)
+    dc_routing_status = dnac_apis.check_template_deployment_status(depl_id_dc_routing, dnac_token)
+    remote_interface_status = dnac_apis.check_template_deployment_status(depl_id_remote_int, dnac_token)
+    remote_routing_status = dnac_apis.check_template_deployment_status(depl_id_remote_routing, dnac_token)
 
-    # print(dc_interface_status, dc_routing_status, remote_interface_status, remote_routing_status)
-    # if dc_interface_status == 'SUCCESS' and dc_routing_status ==  'SUCCESS' and remote_interface_status == 'SUCCESS' and
-        #remote_routing_status == 'SUCCESS':
-        #print('\nAll templates deployment have been successful\n')
+    print('Templates deployment status: ', dc_interface_status, dc_routing_status, remote_interface_status, remote_routing_status)
+    #if dc_interface_status == 'SUCCESS' and dc_routing_status ==  'SUCCESS' and remote_interface_status == 'SUCCESS' \
+            #and remote_routing_status == 'SUCCESS':
+    print('\nAll templates deployment have been successful\n')
 
     # synchronization of devices configured - DC and Remote Router
     dc_sync_status = dnac_apis.sync_device(dc_device_hostname, dnac_token)[0]
@@ -257,19 +300,26 @@ def main():
         print('\nDNA Center started the DC Router resync')
     if remote_sync_status == 202:
         print('\nDNA Center started the Remote Router resync')
+
+    dc_router_tunnel = netconf_restconf.get_restconf_int_oper_status('Tunnel201')
+    remote_router_tunnel = netconf_restconf.get_netconf_int_oper_status('Tunnel201')
+
+    print('\nThe Tunnel 201 interfaces operational state is DC: ', dc_router_tunnel, 'Remote: ', remote_router_tunnel)
+
     print('\nWait for DNA Center to complete the resync of the two devices')
-    time.sleep(120)
 
-    # start a path visualization to check the path segmentation
-    path_visualization_id = dnac_apis.create_path_visualization('172.16.202.1', IPD_IP, dnac_token)
+    time.sleep(180)
 
-    print('\nWait for Path Visualization to complete')
+    # start a path trace to check the path segmentation
+    path_trace_id = dnac_apis.create_path_trace('172.16.202.1', IPD_IP, dnac_token)
+
+    print('\nWait for Path Trace to complete')
     time.sleep(20)
 
-    path_visualization_info = dnac_apis.get_path_visualization_info(path_visualization_id, dnac_token)
-    print('\nPath visualization status: ', path_visualization_info[0])
-    print('\nPath visualization details: ', path_visualization_info[1])
-    utils.pprint(path_visualization_info)
+    path_trace_info = dnac_apis.get_path_trace_info(path_trace_id, dnac_token)
+    print('\nPath Trace status: ', path_trace_info[0])
+    print('\nPath Trace details: ', path_trace_info[1])
+
 
     # create ASAv outside interface ACL to allow traffic
 
@@ -283,14 +333,16 @@ def main():
     # Spark notification
 
     spark_apis.post_room_message(ROOM_NAME, 'Requested access to this device: IPD, located in our office ' +
-                                 remote_device_location +' by user ' + last_person_email + ' has been granted for '
+                                 remote_device_location + ' by user ' + last_person_email + ' has been granted for '
                                  + str(int(timer / 60)) + ' minutes')
+
 
     # Tropo notification - voice call
 
-    voice_notification_result = tropo_notification()
+    #voice_notification_result = spark_apis.tropo_notification()
 
-    spark_apis.post_room_message(ROOM_NAME, 'Tropo Voice Notification: ' + voice_notification_result)
+    #spark_apis.post_room_message(ROOM_NAME, 'Tropo Voice Notification: ' + voice_notification_result)
+
 
     # time.sleep(timer)
     input('Input any key to continue ! ')

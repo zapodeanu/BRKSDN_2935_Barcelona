@@ -15,6 +15,7 @@ from requests_toolbelt import MultipartEncoder  # required to encode messages up
 from urllib3.exceptions import InsecureRequestWarning  # for insecure https warnings
 
 from init import SPARK_AUTH, SPARK_URL
+from init import TROPO_KEY
 
 urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
 
@@ -225,3 +226,27 @@ def post_room_file(room_name, file_name, file_type, file_path):
     print('File posted :  ', file_path+file_name)
 
 
+def tropo_notification():
+    """
+    This function will call Tropo for to trigger a voice notification
+    The ERNA.py script is hosted by Tropo:
+    -----
+    call ("+1 XXX XXX XXXX")
+    say ("The requested access has been granted")
+    -----
+    We will send a get request to launch this script that will call a phone number.
+    Tropo voice will read the message.
+    :return:
+    """
+
+    url = 'https://api.tropo.com/1.0/sessions?action=create&token=' + TROPO_KEY
+    header = {'accept': 'application/json'}
+    response = requests.get(url, headers=header, verify=False)
+    response_json = response.json()
+    result = response_json['success']
+    if result:
+        notification = 'successful'
+    else:
+        notification = 'not successful'
+    print('Tropo notification: ', notification)
+    return notification

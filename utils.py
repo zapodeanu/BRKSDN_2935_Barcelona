@@ -126,7 +126,6 @@ def identify_ipv4_address(configuration):
     pattern = re.compile('^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
     split_lines = configuration.split('\n')  # split configuration file in individual commands'
     for line in split_lines:
-        print(line)
         if 'ip address' in line:  # check if command includes the string 'ip address'
             split_config = line.split(' ')  # split the command in words
             try:

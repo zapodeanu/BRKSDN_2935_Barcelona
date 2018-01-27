@@ -6,3 +6,4 @@ interface Tunnel201
 interface GigabitEthernet3
  ip vrf forwarding REMOTE
  ip address 172.16.202.1 255.255.255.0
+ no shut
