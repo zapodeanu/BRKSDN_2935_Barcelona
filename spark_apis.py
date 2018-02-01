@@ -173,8 +173,8 @@ def last_user_message(room_name):
     list_messages_json = response.json()
     list_messages = list_messages_json['items']
     last_message = list_messages[0]['text']
-    last_person_email = list_messages[0]['personEmail']
-    return last_message, last_person_email
+    last_user_email = list_messages[0]['personEmail']
+    return last_message, last_user_email
 
 
 def post_room_message(room_name, message):

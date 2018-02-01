@@ -6,13 +6,14 @@
 
 # import Python packages
 
-import requests
-import json
+
+import urllib3
 import time
 import datetime
-import urllib3
 import logging
 import sys
+import requests
+import json
 import select
 import re
 
@@ -75,9 +76,8 @@ def main():
     # the user will be asked if interested to run in demo mode or in
     # production (logging to files - erna_log.log, erna_err.log))
 
-    # user_input = utils.get_input_timeout('If running in Demo Mode please enter y ', 10)
+    user_input = utils.get_input_timeout('If running in Demo Mode please enter y ', 10)
 
-    user_input = 'y'
     if user_input != 'y':
 
         # open a log file 'erna.log'
@@ -218,6 +218,11 @@ def main():
     cli_file = open(dc_int_config_file, 'r')  # open file with the template
     cli_config = cli_file.read()  # read the file
 
+    # validation of dc router cli template
+    valid = dnac_apis.check_ipv4_duplicate(dc_int_config_file)
+    if not valid:
+        print('\nDC Router CLI Templates validated')
+
     dnac_apis.upload_template(dc_int_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
     depl_id_dc_int = dnac_apis.deploy_template(dc_int_templ, template_project, dc_device_hostname, dnac_token)  # deploy
     time.sleep(1)
@@ -232,9 +237,6 @@ def main():
     dnac_apis.upload_template(dc_rout_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
     depl_id_dc_routing = dnac_apis.deploy_template(dc_rout_templ, template_project, dc_device_hostname, dnac_token)
 
-    # validation of dc router cli template
-
-    print('\nDC Router CLI Templates validated')
 
     print('\nDeployment of the configurations to the DC Router, ', dc_device_hostname, 'started')
 
@@ -267,12 +269,13 @@ def main():
     cli_config = cli_config.replace('$IPD', IPD_IP)
     cli_config = cli_config.replace('$VlanId', vlan_number)
 
+    # validation of remote router cli template
+    valid = dnac_apis.check_ipv4_duplicate(cli_config)
+    if not valid:
+        print('\nRemote Device CLI Templates validated')
+
     dnac_apis.upload_template(remote_rout_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
     depl_id_remote_routing = dnac_apis.deploy_template(remote_rout_templ, template_project, remote_device_hostname, dnac_token)   # deploy
-
-    # validation of remote cli template
-
-    print('\nRemote Device CLI Templates validated')
 
     print('\nDeployment of the configurations to the Remote device, ', remote_device_hostname, ' started')
 
@@ -304,11 +307,13 @@ def main():
     dc_router_tunnel = netconf_restconf.get_restconf_int_oper_status('Tunnel201')
     remote_router_tunnel = netconf_restconf.get_netconf_int_oper_status('Tunnel201')
 
-    print('\nThe Tunnel 201 interfaces operational state is DC: ', dc_router_tunnel, 'Remote: ', remote_router_tunnel)
+    print('\nThe Tunnel 201 interfaces operational state:')
+    print('From ', remote_device_hostname, ' using NETCONF -', dc_router_tunnel)
+    print('From ', dc_device_hostname, ' using RESTCONF -', remote_router_tunnel)
 
     print('\nWait for DNA Center to complete the resync of the two devices')
 
-    time.sleep(180)
+    time.sleep(240)
 
     # start a path trace to check the path segmentation
     path_trace_id = dnac_apis.create_path_trace('172.16.202.1', IPD_IP, dnac_token)
@@ -328,7 +333,7 @@ def main():
     if asav_status == 201:
         print('ASAv access list updated to allow traffic from ', VDI_IP, ' to ', VDI_IP, ' on the interface ', OUTSIDE_INT)
     else:
-        print('Error while updating the ASAv access list on the interface ', OUTSIDE_INT)
+        print('Error updating the ASAv access list on the interface ', OUTSIDE_INT)
 
     # Spark notification
 
@@ -339,13 +344,13 @@ def main():
 
     # Tropo notification - voice call
 
-    #voice_notification_result = spark_apis.tropo_notification()
+    voice_notification_result = spark_apis.tropo_notification()
 
-    #spark_apis.post_room_message(ROOM_NAME, 'Tropo Voice Notification: ' + voice_notification_result)
+    spark_apis.post_room_message(ROOM_NAME, 'Tropo Voice Notification: ' + voice_notification_result)
 
 
     # time.sleep(timer)
-    input('Input any key to continue ! ')
+    input('\nInput any key to continue ! ')
 
     #
     #  restore configurations to initial state
@@ -393,18 +398,22 @@ def main():
     outside_acl_id = asav_apis.get_asav_access_list(OUTSIDE_INT)
     asav_status = asav_apis.delete_asav_access_list(outside_acl_id, OUTSIDE_INT)
     if asav_status == 204:
-        print('ASAv access list on the interface ', OUTSIDE_INT, ' restored to the baseline configuration')
+        print('\nASAv access list on the interface ', OUTSIDE_INT, ' restored to the baseline configuration')
     else:
         print('Error while restoring the ASAv access list on the interface ', OUTSIDE_INT)
 
     # execute UCSD workflow to discoconnect VDI to VLAN, power on VDI
     # execute_ucsd_workflow(ucsd_key, UCSD_DISCONNECT_FLOW)
 
-    # print('\nUCSD disconnect flow executed')
+    print('\nUCSD disconnect flow executed')
 
     # Spark notification
 
     spark_apis.post_room_message(ROOM_NAME, 'Access to this device: IPD has been terminated')
+
+    # update the database with script execution
+
+    print('\nRecords database updated, file saved')
 
     # restore the stdout to initial value
     sys.stdout = initial_sys
@@ -412,6 +421,8 @@ def main():
     # the local date and time when the code will end execution
 
     date_time = str(datetime.datetime.now().replace(microsecond=0))
+
+
     print('\n\nEnd of application run at this time ', date_time)
 
 

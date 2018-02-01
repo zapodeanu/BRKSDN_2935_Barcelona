@@ -11,6 +11,7 @@ import os.path
 import urllib3
 import socket
 import re
+import utils
 
 from urllib3.exceptions import InsecureRequestWarning  # for insecure https warnings
 from requests.auth import HTTPBasicAuth  # for Basic Auth
@@ -69,7 +70,7 @@ def get_device_info(device_id, dnac_jwt_token):
     :param dnac_jwt_token: DNA C token
     :return: device info
     """
-    url = DNAC_URL + '/api/v1/network-device' + device_id
+    url = DNAC_URL + '/api/v1/network-device?id=' + device_id
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     device_response = requests.get(url, headers=header, verify=False)
     device_info = device_response.json()
@@ -864,7 +865,7 @@ def get_device_info_ip(ip_address, dnac_jwt_token):
 
 def check_ipv4_address(ipv4_address, dnac_jwt_token):
     """
-    This function will find if the IPV4 address is configured on any network interfaces or used by any hosts.
+    This function will find if the IPv4 address is configured on any network interfaces or used by any hosts.
     :param ipv4_address: IPv4 address
     :param dnac_jwt_token: DNA C token
     :return: True/False
@@ -884,4 +885,78 @@ def check_ipv4_address(ipv4_address, dnac_jwt_token):
     return False
 
 
+def check_ipv4_address_configs(ipv4_address, dnac_jwt_token):
+    """
+    This function will verify if the IPv4 address is present in any of the configurations of any devices
+    :param ipv4_address: IPv4 address
+    :param dnac_jwt_token: DNA C token
+    :return: True/False
+    """
+    url = DNAC_URL + '/api/v1/network-device/config'
+    header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
+    response = requests.get(url, headers=header, verify=False)
+    config_json = response.json()
+    config_files = config_json['response']
+    for config in config_files:
+        run_config = config['runningConfig']
+        if ipv4_address in run_config:
+            return True
+    return False
 
+
+def check_ipv4_duplicate(config_file):
+    """
+    This function will:
+      - load a file with a configuration to be deployed to a network device
+      - identify the IPv4 addresses that will be configured on interfaces
+      - search in the DNA Center database if these IPV4 addresses are configured on any interfaces
+      - find if any clients are using the IPv4 addresses
+      - Determine if deploying the configuration file will create an IP duplicate
+    :param config_file: configuration file name
+    :return True/False
+    """
+
+    # open file with the template
+    cli_file = open(config_file, 'r')
+
+    # read the file
+    cli_config = cli_file.read()
+    print('\n The CLI template:\n')
+    print(cli_config)
+
+    ipv4_address_list = utils.identify_ipv4_address(cli_config)
+    print('\nThese IPv4 addresses will be configured:\n')
+    print(ipv4_address_list)
+
+    # get the DNA Center Auth token
+
+    dnac_token = get_dnac_jwt_token(DNAC_AUTH)
+    print('\nThe DNA Center token is: ', dnac_token, '\n')
+
+    # check each address against network devices and clients database
+    # initialize duplicate_ip
+
+    duplicate_ip = False
+    for ipv4_address in ipv4_address_list:
+
+        # check against network devices interfaces
+
+        try:
+            device_info = check_ipv4_network_interface(ipv4_address, dnac_token)
+            duplicate_ip = True
+        except:
+            pass
+
+        # check against any hosts
+
+        try:
+            client_info = get_client_info(ipv4_address, dnac_token)
+            if client_info is not None:
+                duplicate_ip = True
+        except:
+            pass
+
+    if duplicate_ip:
+        return True
+    else:
+        return False
