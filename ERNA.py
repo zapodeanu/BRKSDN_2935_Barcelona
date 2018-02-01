@@ -222,6 +222,7 @@ def main():
     valid = dnac_apis.check_ipv4_duplicate(dc_int_config_file)
     if not valid:
         print('\nDC Router CLI Templates validated')
+        dc_temp_valid = True
 
     dnac_apis.upload_template(dc_int_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
     depl_id_dc_int = dnac_apis.deploy_template(dc_int_templ, template_project, dc_device_hostname, dnac_token)  # deploy
@@ -273,6 +274,7 @@ def main():
     valid = dnac_apis.check_ipv4_duplicate(cli_config)
     if not valid:
         print('\nRemote Device CLI Templates validated')
+        remote_templ_valid = True
 
     dnac_apis.upload_template(remote_rout_templ, template_project, cli_config, dnac_token)  # upload the template to DNA C
     depl_id_remote_routing = dnac_apis.deploy_template(remote_rout_templ, template_project, remote_device_hostname, dnac_token)   # deploy
@@ -291,9 +293,9 @@ def main():
     remote_routing_status = dnac_apis.check_template_deployment_status(depl_id_remote_routing, dnac_token)
 
     print('Templates deployment status: ', dc_interface_status, dc_routing_status, remote_interface_status, remote_routing_status)
-    #if dc_interface_status == 'SUCCESS' and dc_routing_status ==  'SUCCESS' and remote_interface_status == 'SUCCESS' \
-            #and remote_routing_status == 'SUCCESS':
-    print('\nAll templates deployment have been successful\n')
+    if dc_interface_status == 'SUCCESS' and dc_routing_status ==  'SUCCESS' and remote_interface_status == 'SUCCESS' and remote_routing_status == 'SUCCESS':
+        print('\nAll templates deployment have been successful\n')
+        templ_deploy_status = True
 
     # synchronization of devices configured - DC and Remote Router
     dc_sync_status = dnac_apis.sync_device(dc_device_hostname, dnac_token)[0]
@@ -387,7 +389,7 @@ def main():
     cli_config = cli_config.replace('$VlanId', vlan_number)
 
     dnac_apis.upload_template(remote_del_templ, template_project, cli_config, dnac_token)
-    depl_id_remote_del = dnac_apis.deploy_template(remote_del_templ, template_project, remote_device_hostname, dnac_token)
+
 
     print('\nRemote Router restored to the baseline configuration')
 
@@ -413,6 +415,12 @@ def main():
 
     # update the database with script execution
 
+    access_log_file = open('access_logs.csv', 'a')
+    data_to_append = [date_time, last_person_email, IPD_IP, approver_email, dc_temp_valid, remote_templ_valid,
+                      templ_deploy_status, dc_router_tunnel, remote_router_tunnel, path_trace_info]
+    access_log_file.write(data_to_append)
+    access_log_file.close()
+
     print('\nRecords database updated, file saved')
 
     # restore the stdout to initial value
@@ -421,7 +429,6 @@ def main():
     # the local date and time when the code will end execution
 
     date_time = str(datetime.datetime.now().replace(microsecond=0))
-
 
     print('\n\nEnd of application run at this time ', date_time)
 
