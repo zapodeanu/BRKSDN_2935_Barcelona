@@ -390,7 +390,6 @@ def main():
 
     dnac_apis.upload_template(remote_del_templ, template_project, cli_config, dnac_token)
 
-
     print('\nRemote Router restored to the baseline configuration')
 
     time.sleep(1)

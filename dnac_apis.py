@@ -424,7 +424,7 @@ def get_device_id_name(device_name, dnac_jwt_token):
 
 def get_device_status(device_name, dnac_jwt_token):
     """
-    This fucntion will return the reachability status for the network device with the name {device_name}
+    This function will return the reachability status for the network device with the name {device_name}
     :param device_name: device name
     :param dnac_jwt_token: DNA C token
     :return: status - {UNKNOWN} to locate a device in the database,
