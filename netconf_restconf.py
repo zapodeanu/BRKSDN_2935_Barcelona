@@ -18,7 +18,6 @@ USER ='cisco'
 PASS ='cisco'
 ROUTER_AUTH = HTTPBasicAuth(USER, PASS)
 
-import utils
 
 def get_netconf_int_oper_status(interface):
     """
@@ -62,10 +61,5 @@ def get_restconf_int_oper_status(interface):
     response = requests.get(url, headers=header, verify=False, auth=ROUTER_AUTH)
     interface_info = response.json()
     oper_data = interface_info['ietf-interfaces:interface']
-    utils.pprint(oper_data)
     oper_status = oper_data['oper-status']
     return oper_status
-
-
-if get_restconf_int_oper_status('GigabitEthernet2') == 'up':
-    print('ticket opened')
