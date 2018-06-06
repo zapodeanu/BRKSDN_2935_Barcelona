@@ -252,7 +252,6 @@ def delete_template(template_name, project_name, dnac_jwt_token):
     url = DNAC_URL + '/api/v1/template-programmer/template/' + template_id
     header = {'content-type': 'application/json', 'Cookie': dnac_jwt_token}
     response = requests.delete(url, headers=header, verify=False)
-    print(response.text)
 
 
 def get_all_template_info(dnac_jwt_token):
@@ -921,17 +920,13 @@ def check_ipv4_duplicate(config_file):
 
     # read the file
     cli_config = cli_file.read()
-    print('\n The CLI template:\n')
-    print(cli_config)
 
+    # identify the IPv4 addresses included in the config file
     ipv4_address_list = utils.identify_ipv4_address(cli_config)
-    print('\nThese IPv4 addresses will be configured:\n')
-    print(ipv4_address_list)
 
     # get the DNA Center Auth token
 
     dnac_token = get_dnac_jwt_token(DNAC_AUTH)
-    print('\nThe DNA Center token is: ', dnac_token, '\n')
 
     # check each address against network devices and clients database
     # initialize duplicate_ip
